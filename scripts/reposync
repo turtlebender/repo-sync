@@ -4,17 +4,19 @@ from __future__ import absolute_import
 
 import optparse
 import logging
+import os
 
 from reposync.sync import *
 
 if __name__ == "__main__":
   parser = optparse.OptionParser()
   parser.add_option('-i', '--interval', action="store", dest="interval", default=5, type="int", help="Interval to check git")
+  parser.add_option('-d', '--directory', action="store", dest="directory", default=os.path.abspath(','), help="Directory to sync.")
   parser.add_option('-b', '--branch', action="store", dest="branch", default="integration", help="Which branch should be checked")
   parser.add_option('-c', '--callback', action="store", dest="callback", default=None, help="Script to be called upon changes")
   parser.add_option('-v', '--verbose', action="store_true", dest="verbose", default=False, help="More output")
   parser.add_option('-V', '--wicked-verbose', action='store_true', dest="wicked_verbose", default=False, help="Wicked more output")
-  options, remainder = parser.parse_args();
+  options, remainder = parser.parse_args()
   log_level = logging.WARNING
   if options.verbose and options.wicked_verbose:
     print('Dude, do you want more output or wicked more output (Please use either -v or -V, not both)')
@@ -25,5 +27,5 @@ if __name__ == "__main__":
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   signal.signal(signal.SIGINT, kill_handler)
-  updater = GitUpdater(options.interval, options.branch, options.callback)
+  updater = GitUpdater(options.directory, options.interval, options.branch, options.callback)
   updater.start()

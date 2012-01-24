@@ -22,6 +22,7 @@ Options:
 
 import logging
 import optparse
+import os
 import sched
 import signal
 from subprocess import Popen, PIPE, check_call
@@ -43,14 +44,17 @@ class GitUpdater(object):
   check.
   """
 
-  def __init__(self, interval, branch, callback):
+  def __init__(self, path, interval, branch, callback):
     self.interval = interval
     self.branch = branch
     self.callback = callback
+    self.path = path
     scheduler.enter(interval, 1, self.update_from_git, ())
 
   def update_from_git(self):
     check_call(['git', 'fetch'])
+    current_path = os.getcwd()
+    os.chdir(self.path)
     current_ref = Popen(['git', 'symbolic-ref', 'HEAD'], stdout=PIPE).communicate()[0].strip()
     if current_ref != 'refs/heads/{0}'.format(self.branch):
       log.info('Repository is currently on: {0}.  Switching to: refs/heads/{1}'.format(current_ref, self.branch))
@@ -70,6 +74,7 @@ class GitUpdater(object):
         log.info(result)
     else:
       log.debug("No updates to retrieve")
+    os.chdir(current_path)
     scheduler.enter(self.interval, 1, self.update_from_git, ())
 
   def start(self):

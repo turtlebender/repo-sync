@@ -1,10 +1,10 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(name='reposync',
         version='1.0a',
         author='Tom Howe',
         author_email='turtlebender@gmail.com',
-        packages='reposync'
+        packages=['.'],
         install_requires=[ 'pyinotify' ],
-        scripts=[ 'reposync/reposync', 'reposync/repomonitor' ]
+        scripts=[ 'scripts/reposync', 'scripts/repomonitor' ]
         )
