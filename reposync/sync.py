@@ -44,36 +44,37 @@ class GitUpdater(object):
   check.
   """
 
-  def __init__(self, path, interval, branch, callback):
+  def __init__(self, repos, interval, branch, callback):
     self.interval = interval
     self.branch = branch
     self.callback = callback
-    self.path = path
+    self.repos = repos
     scheduler.enter(interval, 1, self.update_from_git, ())
 
   def update_from_git(self):
     check_call(['git', 'fetch'])
     current_path = os.getcwd()
-    os.chdir(self.path)
-    current_ref = Popen(['git', 'symbolic-ref', 'HEAD'], stdout=PIPE).communicate()[0].strip()
-    if current_ref != 'refs/heads/{0}'.format(self.branch):
-      log.info('Repository is currently on: {0}.  Switching to: refs/heads/{1}'.format(current_ref, self.branch))
-      check_call(['git', 'checkout', self.branch])
-    local_hash = Popen(['git', 'rev-parse', 'HEAD'], stdout=PIPE).communicate()[0].strip()
-    p1 = Popen(['git', 'ls-remote', 'origin', self.branch], stdout=PIPE)
-    p2 = Popen(['awk', '{print $1}'], stdin=p1.stdout, stdout=PIPE)
-    p1.stdout.close()
-    remote_hash = p2.communicate()[0].strip()
-    log.debug('Local hash: {0}.  Remote hash: {1}'.format(local_hash, remote_hash))
-    if local_hash != remote_hash:
-      log.info('Updating local repository to: {1}'.format(remote_hash))
-      check_call(['git', 'pull', 'origin', self.branch])
-      if self.callback is not None:
-        log.info('Calling callback')
-        result = Popen([self.callback], stdout=PIPE, stderr=PIPE).communicate()
-        log.info(result)
-    else:
-      log.debug("No updates to retrieve")
+    for repo in repos:
+      os.chdir(self.path)
+      current_ref = Popen(['git', 'symbolic-ref', 'HEAD'], stdout=PIPE).communicate()[0].strip()
+      if current_ref != 'refs/heads/{0}'.format(self.branch):
+        log.info('Repository is currently on: {0}.  Switching to: refs/heads/{1}'.format(current_ref, self.branch))
+        check_call(['git', 'checkout', self.branch])
+      local_hash = Popen(['git', 'rev-parse', 'HEAD'], stdout=PIPE).communicate()[0].strip()
+      p1 = Popen(['git', 'ls-remote', 'origin', self.branch], stdout=PIPE)
+      p2 = Popen(['awk', '{print $1}'], stdin=p1.stdout, stdout=PIPE)
+      p1.stdout.close()
+      remote_hash = p2.communicate()[0].strip()
+      log.debug('Repo: {0}. Local hash: {1}.  Remote hash: {2}'.format(repo, local_hash, remote_hash))
+      if local_hash != remote_hash:
+          log.info('Updating local repository: {0} to: {1}'.format(repo, remote_hash))
+        check_call(['git', 'pull', 'origin', self.branch])
+        if self.callback is not None:
+          log.info('Calling callback for {0}'.format(repo))
+          result = Popen([self.callback], stdout=PIPE, stderr=PIPE).communicate()
+          log.debug("Callback result for: {0}.  {1}".format(repo, result))
+      else:
+        log.debug("No updates to retrieve for {0}".format(repo))
     os.chdir(current_path)
     scheduler.enter(self.interval, 1, self.update_from_git, ())
 

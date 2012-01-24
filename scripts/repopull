@@ -3,22 +3,20 @@
 from __future__ import absolute_import
 
 import optparse
-import sys
-from multiprocessing import Process
-from reposync.fs_monitor import *
+import logging
+import os
 
+from reposync.sync import *
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   parser = optparse.OptionParser()
-  parser.add_option('-r', '--repos', action="store", dest="repos", help="Repository roots to monitor")
   parser.add_option('-i', '--interval', action="store", dest="interval", default=5, type="int", help="Interval to check git")
+  parser.add_option('-d', '--directory', action="store", dest="directory", default=os.path.abspath(','), help="Directory to sync.")
   parser.add_option('-b', '--branch', action="store", dest="branch", default="integration", help="Which branch should be checked")
+  parser.add_option('-c', '--callback', action="store", dest="callback", default=None, help="Script to be called upon changes")
   parser.add_option('-v', '--verbose', action="store_true", dest="verbose", default=False, help="More output")
   parser.add_option('-V', '--wicked-verbose', action='store_true', dest="wicked_verbose", default=False, help="Wicked more output")
   options, remainder = parser.parse_args()
-  if options.repos is None:
-    print("You must specify at least one repository to monitor")
-    sys.exit(1)
   log_level = logging.WARNING
   if options.verbose and options.wicked_verbose:
     print('Dude, do you want more output or wicked more output (Please use either -v or -V, not both)')
@@ -28,11 +26,6 @@ if __name__ == '__main__':
   if options.wicked_verbose:
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
-  repos = options.repos.split(',')
-  monitor = FileSystemMonitor(repos)
-  monitor_process = Process(target=monitor.start, args=())
-  monitor_process.start()
-
-  updater = GitUpdater(repos, options.interval, options.branch, options.callback)
-  updater_process = Process(target=updater.start, args=())
-  updater_process.start()
+  signal.signal(signal.SIGINT, kill_handler)
+  updater = GitUpdater(options.directory, options.interval, options.branch, options.callback)
+  updater.start()

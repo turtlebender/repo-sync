@@ -6,5 +6,5 @@ setup(name='reposync',
         author_email='turtlebender@gmail.com',
         packages=['.'],
         install_requires=[ 'pyinotify' ],
-        scripts=[ 'scripts/reposync', 'scripts/repomonitor' ]
+        scripts=[ 'scripts/repopush', 'scripts/repopull' ]
         )
