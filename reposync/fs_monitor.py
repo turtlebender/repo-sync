@@ -8,17 +8,20 @@ import pyinotify
 
 log = logging.getLogger()
 
-pattern = re.compile(".*\..*")
+patterns = [ re.compile(".*\..*") ]
 
 class GitMonitor(pyinotify.ProcessEvent):
   def my_init(self, monitor):
     self.monitor = monitor
 
   def process_IN_CLOSE_WRITE(self, event):
-    if pattern.search(event.pathname) is not None:
+    for pattern in patterns:
+      if pattern.search(event.pathname) is not None:
+        return
+    ugly_regex = '%s/\d{4}$' % event.path
+    if re.search(ugly_regex, event.pathname) is not None:
       return
-    log.info("event: {0}".format(event))
-    log.info("adding and committing: {0}".format(event.pathname))
+    log.debug("adding and committing: {0}".format(event.pathname))
     git_add = Popen(['git', 'add', event.pathname], cwd=event.path, stdout=PIPE, stderr=PIPE)
     git_add_result = git_add.communicate()
     if git_add.returncode != 0:
@@ -28,6 +31,11 @@ class GitMonitor(pyinotify.ProcessEvent):
     git_commit_result = git_commit.communicate()
     if git_commit.returncode != 0:
       log.warn("Error committing file: {0} \n {1} \n {2}".format(event.pathname, git_commit_result[1], git_commit_result[0]))
+
+    git_push = Popen(['git', 'push', 'origin', 'master'], cwd=event.path, stdout=PIPE, stderr=PIPE)
+    git_push_result = git_push.communicate()
+    if git_push.returncode != 0:
+      log.warn("Error pushing file: {0}\n{1}\n{2}".format(event.pathname, git_push_result[1], git_commit_result[0]))
 
 
 class FileSystemMonitor(object):

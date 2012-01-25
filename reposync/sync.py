@@ -54,10 +54,14 @@ class GitUpdater(object):
     scheduler.enter(interval, 1, self.update_from_git, ())
 
   def update_from_git(self):
-    check_call(['git', 'fetch'])
     current_path = os.getcwd()
     for repo in self.repos:
       os.chdir(repo)
+      git_fetch = Popen(['git', 'fetch'], stdout=PIPE, stderr=PIPE)
+      result = git_fetch.communicate()
+      if git_fetch.returncode != 0:
+        log.warn("Error fetching remote repo")
+        log.warn("{0}\n{1}".format(result[1], result[0]))
       current_ref = Popen(['git', 'symbolic-ref', 'HEAD'], stdout=PIPE).communicate()[0].strip()
       if current_ref != 'refs/heads/{0}'.format(self.branch):
         log.info('Repository is currently on: {0}.  Switching to: refs/heads/{1}'.format(current_ref, self.branch))
