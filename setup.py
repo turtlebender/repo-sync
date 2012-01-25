@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(name='reposync',
-        version='1.0a',
+        version='1.0a1',
         author='Tom Howe',
         author_email='turtlebender@gmail.com',
-        packages=['.'],
+        packages=['reposync'],
         install_requires=[ 'pyinotify' ],
-        scripts=[ 'scripts/repopush', 'scripts/repopull' ]
+        scripts=[ 'scripts/reposync', 'scripts/repopush', 'scripts/repopull' ]
         )

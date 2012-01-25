@@ -17,6 +17,7 @@ class GitMonitor(pyinotify.ProcessEvent):
   def process_IN_CLOSE_WRITE(self, event):
     if pattern.search(event.pathname) is not None:
       return
+    log.info("event: {0}".format(event))
     log.info("adding and committing: {0}".format(event.pathname))
     git_add = Popen(['git', 'add', event.pathname], cwd=event.path, stdout=PIPE, stderr=PIPE)
     git_add_result = git_add.communicate()
