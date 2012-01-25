@@ -22,6 +22,13 @@ class GitMonitor(pyinotify.ProcessEvent):
     ugly_regex = '%s/\d{4}$' % event.path
     if re.search(ugly_regex, event.pathname) is not None:
       return
+    git_status = Popen(['git', 'status', '--porcelain'], cwd=event.path, stdout=PIPE, stderr=PIPE)
+    git_status_result = git_status.communicate()
+    if git_status.returncode != 0:
+      log.warn("Error retrieving status {0}\n{1}".format(git_status_result[1], git_status_result[0]))
+    if len(git_status_result[0].strip()) == 0:
+      log.debug("File change result of git pull: {0}".format(event.pathname))
+      return
     log.debug("adding and committing: {0}".format(event.pathname))
     git_add = Popen(['git', 'add', event.pathname], cwd=event.path, stdout=PIPE, stderr=PIPE)
     git_add_result = git_add.communicate()
