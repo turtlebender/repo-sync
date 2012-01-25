@@ -6,13 +6,28 @@ import optparse
 import sys
 from multiprocessing import Process
 from reposync.fs_monitor import *
+from reposync.sync import *
 
+def start_fs_monitor(monitor):
+  try:
+    monitor.start()
+  except KeyboardInterrupt:
+    monitor.stop()    
+    sys.exit(0)
+
+def start_git_updater(updater):
+  try:
+    updater.start()
+  except KeyboardInterrupt:
+    updater.stop()
+    sys.exit(0)
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
   parser.add_option('-r', '--repos', action="store", dest="repos", help="Repository roots to monitor")
   parser.add_option('-i', '--interval', action="store", dest="interval", default=5, type="int", help="Interval to check git")
   parser.add_option('-b', '--branch', action="store", dest="branch", default="integration", help="Which branch should be checked")
+  parser.add_option('-c', '--callback', action="store", dest="callback", default=None, help="Script to be called upon changes")
   parser.add_option('-v', '--verbose', action="store_true", dest="verbose", default=False, help="More output")
   parser.add_option('-V', '--wicked-verbose', action='store_true', dest="wicked_verbose", default=False, help="Wicked more output")
   options, remainder = parser.parse_args()
@@ -30,9 +45,16 @@ if __name__ == '__main__':
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   repos = options.repos.split(',')
   monitor = FileSystemMonitor(repos)
-  monitor_process = Process(target=monitor.start, args=())
+  monitor_process = Process(target=start_fs_monitor, args=(monitor,))
   monitor_process.start()
 
   updater = GitUpdater(repos, options.interval, options.branch, options.callback)
-  updater_process = Process(target=updater.start, args=())
+  updater_process = Process(target=start_git_updater, args=(updater,))
   updater_process.start()
+
+  def handle_kill(signum, frame):
+    monitor_process.join()
+    updater_process.join()
+
+  import signal
+  signal.signal(signal.SIGINT, handle_kill)
