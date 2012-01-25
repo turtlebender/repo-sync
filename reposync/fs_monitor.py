@@ -8,11 +8,12 @@ import pyinotify
 
 log = logging.getLogger()
 
-patterns = [ re.compile(".*\..*") ]
+patterns = [ re.compile(".*/\..*") ]
 
 class GitMonitor(pyinotify.ProcessEvent):
-  def my_init(self, monitor):
+  def my_init(self, branch, monitor):
     self.monitor = monitor
+    self.branch = branch
 
   def process_IN_CLOSE_WRITE(self, event):
     for pattern in patterns:
@@ -32,7 +33,7 @@ class GitMonitor(pyinotify.ProcessEvent):
     if git_commit.returncode != 0:
       log.warn("Error committing file: {0} \n {1} \n {2}".format(event.pathname, git_commit_result[1], git_commit_result[0]))
 
-    git_push = Popen(['git', 'push', 'origin', 'master'], cwd=event.path, stdout=PIPE, stderr=PIPE)
+    git_push = Popen(['git', 'push', 'origin', self.branch], cwd=event.path, stdout=PIPE, stderr=PIPE)
     git_push_result = git_push.communicate()
     if git_push.returncode != 0:
       log.warn("Error pushing file: {0}\n{1}\n{2}".format(event.pathname, git_push_result[1], git_commit_result[0]))
@@ -40,10 +41,11 @@ class GitMonitor(pyinotify.ProcessEvent):
 
 class FileSystemMonitor(object):
 
-  def __init__(self, *dirs):
+  def __init__(self, branch, *dirs):
     self.dirs = dirs
+    self.branch = branch
     self.wm = pyinotify.WatchManager()
-    self.git_monitor = GitMonitor(monitor=self.wm)
+    self.git_monitor = GitMonitor(branch=self.branch, monitor=self.wm)
     self.notifier = pyinotify.Notifier(self.wm, default_proc_fun=self.git_monitor)
     self.watch_list = []
 

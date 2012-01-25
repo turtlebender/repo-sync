@@ -47,7 +47,7 @@ if __name__ == '__main__':
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   repos = options.repos.split(',')
-  monitor = FileSystemMonitor(repos)
+  monitor = FileSystemMonitor(options.branch, repos)
   monitor_process = Process(target=start_fs_monitor, args=(monitor,))
   monitor_process.start()
 
