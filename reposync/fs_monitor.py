@@ -8,16 +8,28 @@ import pyinotify
 
 log = logging.getLogger()
 
-pattern = re.compile(".*\..*")
+patterns = [ re.compile(".*/\..*") ]
 
 class GitMonitor(pyinotify.ProcessEvent):
-  def my_init(self, monitor):
+  def my_init(self, branch, monitor):
     self.monitor = monitor
+    self.branch = branch
 
   def process_IN_CLOSE_WRITE(self, event):
-    if pattern.search(event.pathname) is not None:
+    for pattern in patterns:
+      if pattern.search(event.pathname) is not None:
+        return
+    ugly_regex = '%s/\d{4}$' % event.path
+    if re.search(ugly_regex, event.pathname) is not None:
       return
-    log.info("adding and committing: {0}".format(event.pathname))
+    git_status = Popen(['git', 'status', '--porcelain'], cwd=event.path, stdout=PIPE, stderr=PIPE)
+    git_status_result = git_status.communicate()
+    if git_status.returncode != 0:
+      log.warn("Error retrieving status {0}\n{1}".format(git_status_result[1], git_status_result[0]))
+    if len(git_status_result[0].strip()) == 0:
+      log.debug("File change result of git pull: {0}".format(event.pathname))
+      return
+    log.debug("adding and committing: {0}".format(event.pathname))
     git_add = Popen(['git', 'add', event.pathname], cwd=event.path, stdout=PIPE, stderr=PIPE)
     git_add_result = git_add.communicate()
     if git_add.returncode != 0:
@@ -28,13 +40,19 @@ class GitMonitor(pyinotify.ProcessEvent):
     if git_commit.returncode != 0:
       log.warn("Error committing file: {0} \n {1} \n {2}".format(event.pathname, git_commit_result[1], git_commit_result[0]))
 
+    git_push = Popen(['git', 'push', 'origin', self.branch], cwd=event.path, stdout=PIPE, stderr=PIPE)
+    git_push_result = git_push.communicate()
+    if git_push.returncode != 0:
+      log.warn("Error pushing file: {0}\n{1}\n{2}".format(event.pathname, git_push_result[1], git_commit_result[0]))
+
 
 class FileSystemMonitor(object):
 
-  def __init__(self, *dirs):
+  def __init__(self, branch, *dirs):
     self.dirs = dirs
+    self.branch = branch
     self.wm = pyinotify.WatchManager()
-    self.git_monitor = GitMonitor(monitor=self.wm)
+    self.git_monitor = GitMonitor(branch=self.branch, monitor=self.wm)
     self.notifier = pyinotify.Notifier(self.wm, default_proc_fun=self.git_monitor)
     self.watch_list = []
 

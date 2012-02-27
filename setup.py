@@ -1,8 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='reposync',
-        zip_safe=False,
-        version='1.0a',
+        version='1.0a1',
         author='Tom Howe',
         author_email='turtlebender@gmail.com',
         packages=['reposync'],

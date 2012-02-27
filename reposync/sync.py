@@ -49,13 +49,19 @@ class GitUpdater(object):
     self.branch = branch
     self.callback = callback
     self.repos = repos
+    for repo in self.repos:
+      log.info("Monitoring remote repo for: {0}".format(repo))
     scheduler.enter(interval, 1, self.update_from_git, ())
 
   def update_from_git(self):
-    check_call(['git', 'fetch'])
     current_path = os.getcwd()
-    for repo in repos:
-      os.chdir(self.path)
+    for repo in self.repos:
+      os.chdir(repo)
+      git_fetch = Popen(['git', 'fetch'], stdout=PIPE, stderr=PIPE)
+      result = git_fetch.communicate()
+      if git_fetch.returncode != 0:
+        log.warn("Error fetching remote repo")
+        log.warn("{0}\n{1}".format(result[1], result[0]))
       current_ref = Popen(['git', 'symbolic-ref', 'HEAD'], stdout=PIPE).communicate()[0].strip()
       if current_ref != 'refs/heads/{0}'.format(self.branch):
         log.info('Repository is currently on: {0}.  Switching to: refs/heads/{1}'.format(current_ref, self.branch))
@@ -80,6 +86,15 @@ class GitUpdater(object):
 
   def start(self):
     scheduler.run()
+
+  def stop(self):
+    if not scheduler.empty:
+      for event in scheduler.queue:
+        try:
+          scheduler.cancel(event)
+        except ValueError:
+          log.debug('Job beat us to the shutdown punch: {0}'.format(event))
+
 
 def kill_handler(signal, frame):
   log.info('Shutting Down')
