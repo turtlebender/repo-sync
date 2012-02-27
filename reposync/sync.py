@@ -67,7 +67,7 @@ class GitUpdater(object):
       remote_hash = p2.communicate()[0].strip()
       log.debug('Repo: {0}. Local hash: {1}.  Remote hash: {2}'.format(repo, local_hash, remote_hash))
       if local_hash != remote_hash:
-          log.info('Updating local repository: {0} to: {1}'.format(repo, remote_hash))
+        log.info('Updating local repository: {0} to: {1}'.format(repo, remote_hash))
         check_call(['git', 'pull', 'origin', self.branch])
         if self.callback is not None:
           log.info('Calling callback for {0}'.format(repo))
