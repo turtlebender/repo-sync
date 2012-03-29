@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import absolute_import
+from multiprocessing import Lock
 
 """
 Simple app to monitor a remote git repository and update the local
@@ -44,7 +45,8 @@ class GitUpdater(object):
   check.
   """
 
-  def __init__(self, repos, interval, branch, callback):
+  def __init__(self, mutx, repos, interval, branch, callback):
+    self.mutx = mutx
     self.interval = interval
     self.branch = branch
     self.callback = callback
@@ -54,6 +56,7 @@ class GitUpdater(object):
     scheduler.enter(interval, 1, self.update_from_git, ())
 
   def update_from_git(self):
+    self.mutx.acquire()
     current_path = os.getcwd()
     for repo in self.repos:
       os.chdir(repo)
@@ -83,6 +86,7 @@ class GitUpdater(object):
         log.debug("No updates to retrieve for {0}".format(repo))
     os.chdir(current_path)
     scheduler.enter(self.interval, 1, self.update_from_git, ())
+    self.mutx.release()
 
   def start(self):
     scheduler.run()
@@ -94,7 +98,7 @@ class GitUpdater(object):
           scheduler.cancel(event)
         except ValueError:
           log.debug('Job beat us to the shutdown punch: {0}'.format(event))
-
+    self.mutx.release()
 
 def kill_handler(signal, frame):
   log.info('Shutting Down')
@@ -104,6 +108,7 @@ def kill_handler(signal, frame):
         scheduler.cancel(event)
       except ValueError:
         log.debug('Job beat us to the shutdown punch: {0}'.format(event))
+  self.mutx.release()
   sys.exit(0)
 
 if __name__ == "__main__":
@@ -124,5 +129,5 @@ if __name__ == "__main__":
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   signal.signal(signal.SIGINT, kill_handler)
-  updater = GitUpdater(options.interval, options.branch, options.callback)
+  updater = GitUpdater(None, options.interval, options.branch, options.callback)
   updater.start()
