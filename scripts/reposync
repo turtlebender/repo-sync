@@ -7,18 +7,18 @@ from __future__ import absolute_import
 """
 import optparse
 import sys
-from multiprocessing import Process
+from multiprocessing import Process, Lock
 from reposync.fs_monitor import *
 from reposync.sync import *
 
-def start_fs_monitor(monitor):
+def start_fs_monitor(monitor, mutex):
   try:
     monitor.start()
   except KeyboardInterrupt:
     monitor.stop()    
     sys.exit(0)
 
-def start_git_updater(updater):
+def start_git_updater(updater, mutex):
   try:
     updater.start()
   except KeyboardInterrupt:
@@ -47,12 +47,13 @@ if __name__ == '__main__':
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   repos = options.repos.split(',')
-  monitor = FileSystemMonitor(options.branch, repos)
-  monitor_process = Process(target=start_fs_monitor, args=(monitor,))
+  mutex = Lock()
+  monitor = FileSystemMonitor(mutex,options.branch, repos)
+  monitor_process = Process(target=start_fs_monitor, args=(monitor,mutex))
   monitor_process.start()
 
-  updater = GitUpdater(repos, options.interval, options.branch, options.callback)
-  updater_process = Process(target=start_git_updater, args=(updater,))
+  updater = GitUpdater(mutex,repos, options.interval, options.branch, options.callback)
+  updater_process = Process(target=start_git_updater, args=(updater,mutex))
   updater_process.start()
 
   def handle_kill(signum, frame):
