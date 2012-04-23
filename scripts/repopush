@@ -9,7 +9,7 @@ from reposync.fs_monitor import *
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
-  parser.add_option('-r', '--repo', action="store", dest="repo", help="Repository roots to monitor")
+  parser.add_option('-r', '--repo', action="store", dest="repos", help="Repository roots to monitor")
   parser.add_option('-b', '--branch', action="store", dest="branch",
           default="integration", help="Which branch should be pushed")
   parser.add_option('-v', '--verbose', action="store_true", dest="verbose", default=False, help="More output")
