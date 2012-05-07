@@ -27,5 +27,5 @@ if __name__ == "__main__":
     log_level = logging.DEBUG
   logging.basicConfig(level=log_level, format="%(levelname)s - %(asctime)s (%(name)s:%(funcName)s):  %(msg)s")
   signal.signal(signal.SIGINT, kill_handler)
-  updater = GitUpdater(options.directory, options.interval, options.branch, options.callback)
+  updater = GitUpdater(None, [options.directory], options.interval, options.branch, options.callback)
   updater.start()
